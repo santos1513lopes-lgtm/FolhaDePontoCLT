@@ -3,421 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciador de Folha de Ponto CLT</title>
-    <style>
-        /* Variáveis do Modo Claro (Default) */
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-color: #e2e8f0; /* Um pouco mais escuro para dar contraste aos cards */
-            --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #cbd5e1;
-            --success: #16a34a;
-            --danger: #dc2626;
-            --info: #0891b2;
-            --warning: #d97706;
-            --input-bg: #f8fafc;
-            --th-bg: #f1f5f9;
-        }
-
-        /* Variáveis do Modo Escuro */
-        [data-theme="dark"] {
-            --primary: #3b82f6;
-            --primary-hover: #60a5fa;
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #334155;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --info: #0ea5e9;
-            --warning: #f59e0b;
-            --input-bg: #0f172a;
-            --th-bg: #0f172a;
-            color-scheme: dark; /* Faz os inputs de data/hora ficarem escuros nativamente */
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; transition: background-color 0.3s, color 0.3s; }
-        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; }
-        .container { max-width: 1050px; margin: 0 auto; }
-        
-        /* Header & Tema */
-        .header { text-align: center; margin-bottom: 20px; position: relative; }
-        .theme-toggle { position: absolute; right: 0; top: 0; background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); font-size: 1.2rem; padding: 8px 12px; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .theme-toggle:hover { transform: scale(1.05); }
-
-        /* Tabs */
-        .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 8px 20px; border: 1px solid var(--border); background-color: var(--card-bg); color: var(--text-muted); border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
-        .tab-btn.active { background-color: var(--primary); color: white; border-color: var(--primary); }
-
-        /* Controles (Compactos na mesma linha) */
-        .controls-card { background: var(--card-bg); padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .controls-grid { display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; }
-        .control-group { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 4px; }
-        .control-group.large { flex: 2; min-width: 250px; }
-        .control-group label { font-size: 0.8rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase; }
-        
-        input[type="text"], input[type="number"], input[type="week"], input[type="month"], input[type="time"].config-time { 
-            padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; width: 100%; 
-            background-color: var(--input-bg); color: var(--text-main);
-        }
-        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
-
-        /* Tabela */
-        .table-container { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); overflow-x: auto; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; text-align: center; border-bottom: 1px solid var(--border); }
-        th { background-color: var(--th-bg); color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
-        td input[type="time"] { padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; width: auto; background-color: var(--input-bg); color: var(--text-main); }
-        
-        .cb-container { display: inline-flex; align-items: center; cursor: pointer; }
-        .cb-container input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
-
-        .total-dia { font-weight: bold; font-family: monospace; font-size: 1.05rem; }
-        .texto-abono { color: var(--warning); font-size: 0.75rem; display: block; margin-top: 2px; }
-        .texto-extra100 { color: var(--info); font-size: 0.75rem; display: block; margin-top: 2px; }
-
-        /* Resumo */
-        .summary-card { background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: space-around; margin-bottom: 20px; text-align: center; flex-wrap: wrap; gap: 10px;}
-        .summary-item h3 { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; }
-        .summary-item .value { font-size: 1.6rem; font-weight: bold; }
-        .positive { color: var(--success); }
-        .negative { color: var(--danger); }
-        .info-color { color: var(--info); }
-
-        /* Ações */
-        .actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-        .btn { padding: 10px 18px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; color: white; display: flex; align-items: center; gap: 8px; }
-        .btn-primary { background-color: var(--primary); }
-        .btn-danger { background-color: var(--danger); color: white; }
-        .btn-success { background-color: var(--success); color: white; }
-        .btn-info { background-color: var(--info); color: white; }
-        .btn:hover { opacity: 0.85; transform: translateY(-1px); }
-        
-        #csv-import-hidden { display: none; }
-
-        @media print {
-            body { background: white; padding: 0; color: black; }
-            [data-theme="dark"] { color-scheme: light; }
-            .tabs, .actions, .theme-toggle, #csv-import-hidden { display: none; }
-            .controls-card, .table-container, .summary-card { box-shadow: none; border: 1px solid #ddd; background: white;}
-            input { border: none; background: transparent !important; color: black !important; }
-        }
-    </style>
+    <title>Folha de Ponto CLT - Nuvem</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <button class="theme-toggle" onclick="toggleTheme()" id="theme-icon">🌓</button>
-        <h1>Folha de Ponto CLT</h1>
-        <p id="period-subtitle" style="color: var(--text-muted); font-size: 0.9rem;">Controle de jornada e banco de horas</p>
+    <div id="login-screen">
+        <h1>🔐 Acesso Restrito</h1>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Entre para acessar o sistema</p>
+        <div class="login-form">
+            <input type="email" id="login-email" placeholder="E-mail">
+            <input type="password" id="login-password" placeholder="Senha">
+            <button class="btn btn-primary" onclick="window.handleLogin()">Entrar</button>
+        </div>
+        <p id="login-error" style="color: var(--danger); margin-top: 10px; font-size: 0.9rem;"></p>
     </div>
 
-    <div class="tabs">
-        <button id="btn-week" class="tab-btn active" onclick="setMode('week')">Visão Semanal</button>
-        <button id="btn-month" class="tab-btn" onclick="setMode('month')">Visão Mensal</button>
-    </div>
-
-    <div class="controls-card">
-        <div class="controls-grid">
-            <div class="control-group large">
-                <label>Funcionário</label>
-                <input type="text" id="employee-name" placeholder="Nome completo" oninput="saveSettings()">
-            </div>
-            <div class="control-group" id="week-control">
-                <label>Semana</label>
-                <input type="week" id="week-input" onchange="renderTable()">
-            </div>
-            <div class="control-group" id="month-control" style="display: none;">
-                <label>Mês</label>
-                <input type="month" id="month-input" onchange="renderTable()">
-            </div>
-            <div class="control-group">
-                <label>Carga Base (Ex: 44)</label>
-                <input type="number" id="base-hours" value="44" onchange="updateSummary()">
-            </div>
-            <div class="control-group">
-                <label>Jornada Diária</label>
-                <input type="time" class="config-time" id="jornada-diaria" value="08:00" onchange="saveSettings(); renderTable()">
+    <div class="container" id="app-container">
+        
+        <div class="top-bar">
+            <h1>Folha de Ponto CLT</h1>
+            <div class="top-bar-actions">
+                <button class="theme-toggle" onclick="window.toggleTheme()" id="theme-icon">🌓</button>
+                <button class="btn btn-danger btn-sm" onclick="window.handleLogout()">Sair</button>
             </div>
         </div>
-    </div>
 
-    <div class="table-container">
-        <table id="ponto-table">
-            <thead>
-                <tr>
-                    <th>Data / Dia</th>
-                    <th>Entrada</th>
-                    <th>Saída Almoço</th>
-                    <th>Retorno Almoço</th>
-                    <th>Saída Final</th>
-                    <th>Feriado/Atestado</th>
-                    <th>Total do Dia</th>
-                </tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-        </table>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-item">
-            <h3>Total (Trabalho + Abono)</h3>
-            <div class="value" id="total-trabalhado">00:00</div>
+        <div class="tabs">
+            <button id="btn-week" class="tab-btn active" onclick="window.setMode('week')">Semana</button>
+            <button id="btn-month" class="tab-btn" onclick="window.setMode('month')">Mês</button>
+            <button id="btn-config" class="tab-btn" onclick="window.setMode('config')">⚙️ Funcionários</button>
         </div>
-        <div class="summary-item">
-            <h3>Saldo (Banco)</h3>
-            <div class="value" id="saldo-final">00:00</div>
+
+        <div id="view-config" style="display: none;">
+            <div class="config-card">
+                <h3 style="margin-bottom: 15px;">Cadastrar Novo Funcionário</h3>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-employee-name" placeholder="Nome completo do funcionário">
+                    <button class="btn btn-primary" onclick="window.addEmployee()">Cadastrar</button>
+                </div>
+                <p id="config-msg" style="color: var(--success); margin-top: 10px; font-size: 0.9rem;"></p>
+            </div>
         </div>
-        <div class="summary-item">
-            <h3>Extras 100% (Feriados)</h3>
-            <div class="value info-color" id="horas-100">00:00</div>
+
+        <div id="view-ponto">
+            <div class="controls-card">
+                <div class="controls-grid">
+                    <div class="control-group" style="flex: 2;">
+                        <label>Funcionário</label>
+                        <select id="employee-select" onchange="window.loadEmployeeData()">
+                            <option value="">-- Selecione um funcionário --</option>
+                        </select>
+                    </div>
+                    <div class="control-group" id="week-control">
+                        <label>Semana</label>
+                        <input type="week" id="week-input" onchange="window.renderTable()">
+                    </div>
+                    <div class="control-group" id="month-control" style="display: none;">
+                        <label>Mês</label>
+                        <input type="month" id="month-input" onchange="window.renderTable()">
+                    </div>
+                    <div class="control-group">
+                        <label>Carga Base</label>
+                        <input type="number" id="base-hours" value="44" onchange="window.updateSummary()">
+                    </div>
+                    <div class="control-group">
+                        <label>Jornada Diária</label>
+                        <input type="time" id="jornada-diaria" value="08:00" onchange="window.renderTable()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Data / Dia</th><th>Entrada</th><th>Saída Almoço</th><th>Retorno</th><th>Saída Final</th><th>Feriado/Atestado</th><th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-item">
+                    <h3 style="font-size: 0.8rem; color: var(--text-muted);">Total (Trabalho+Abono)</h3>
+                    <div class="value" id="total-trabalhado">00:00</div>
+                </div>
+                <div class="summary-item">
+                    <h3 style="font-size: 0.8rem; color: var(--text-muted);">Saldo (Banco)</h3>
+                    <div class="value" id="saldo-final">00:00</div>
+                </div>
+                <div class="summary-item">
+                    <h3 style="font-size: 0.8rem; color: var(--text-muted);">Extras 100%</h3>
+                    <div class="value info-color" id="horas-100">00:00</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
+                <button class="btn btn-danger" onclick="window.clearData()">Limpar Tudo</button>
+                <input type="file" id="csv-import-hidden" accept=".csv" onchange="window.handleCSVImport(this)" style="display:none">
+                <button class="btn btn-info" onclick="document.getElementById('csv-import-hidden').click()">Importar CSV</button>
+                <button class="btn btn-success" onclick="window.exportCSV()">Exportar CSV</button>
+                <button class="btn btn-primary" onclick="window.print()">Salvar PDF / Imprimir</button>
+            </div>
         </div>
+
     </div>
 
-    <div class="actions">
-        <button class="btn btn-danger" onclick="clearData()">Limpar Tudo</button>
-        <input type="file" id="csv-import-hidden" accept=".csv" onchange="handleCSVImport(this)">
-        <button class="btn btn-info" onclick="document.getElementById('csv-import-hidden').click()">Importar CSV</button>
-        <button class="btn btn-success" onclick="exportCSV()">Exportar CSV</button>
-        <button class="btn btn-primary" onclick="window.print()">Imprimir Folha</button>
-    </div>
-</div>
-
-<script>
-    let currentMode = 'week'; 
-    let appData = {};
-
-    // Configuração de Tema Dark/Light
-    function initTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        document.getElementById('theme-icon').innerText = savedTheme === 'dark' ? '☀️' : '🌙';
-    }
-
-    function toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.getElementById('theme-icon').innerText = newTheme === 'dark' ? '☀️' : '🌙';
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        initTheme();
-        
-        appData = JSON.parse(localStorage.getItem('folhaDePontoData')) || {};
-        document.getElementById('employee-name').value = localStorage.getItem('employeeName') || '';
-        document.getElementById('jornada-diaria').value = localStorage.getItem('jornadaDiaria') || '08:00';
-
-        const now = new Date();
-        document.getElementById('month-input').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-        const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
-        const week1 = new Date(d.getFullYear(), 0, 4);
-        const weekNo = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-        document.getElementById('week-input').value = `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
-
-        renderTable();
-    });
-
-    function saveSettings() {
-        localStorage.setItem('employeeName', document.getElementById('employee-name').value);
-        localStorage.setItem('jornadaDiaria', document.getElementById('jornada-diaria').value);
-    }
-
-    function setMode(mode) {
-        currentMode = mode;
-        document.getElementById('btn-week').classList.remove('active');
-        document.getElementById('btn-month').classList.remove('active');
-        document.getElementById(`btn-${mode}`).classList.add('active');
-
-        if (mode === 'week') {
-            document.getElementById('week-control').style.display = 'flex';
-            document.getElementById('month-control').style.display = 'none';
-            document.getElementById('base-hours').value = 44;
-        } else {
-            document.getElementById('week-control').style.display = 'none';
-            document.getElementById('month-control').style.display = 'flex';
-            document.getElementById('base-hours').value = 220;
-        }
-        renderTable();
-    }
-
-    function getDatesToRender() {
-        let dates = [];
-        if (currentMode === 'week') {
-            const weekVal = document.getElementById('week-input').value; 
-            if (!weekVal) return [];
-            const [y, w] = weekVal.split('-W').map(Number);
-            const simple = new Date(y, 0, 1 + (w - 1) * 7);
-            const ISOweekStart = new Date(simple);
-            const dow = simple.getDay();
-            ISOweekStart.setDate(simple.getDate() - (dow === 0 ? 6 : dow - 1));
-            for (let i = 0; i < 7; i++) {
-                const cur = new Date(ISOweekStart);
-                cur.setDate(ISOweekStart.getDate() + i);
-                dates.push(cur.toISOString().split('T')[0]);
-            }
-        } else {
-            const [y, m] = document.getElementById('month-input').value.split('-').map(Number);
-            const lastDay = new Date(y, m, 0).getDate();
-            for (let i = 1; i <= lastDay; i++) {
-                dates.push(`${y}-${String(m).padStart(2,'0')}-${String(i).padStart(2,'0')}`);
-            }
-        }
-        return dates;
-    }
-
-    function renderTable() {
-        const tbody = document.getElementById('table-body');
-        tbody.innerHTML = '';
-        const dates = getDatesToRender();
-        const diasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-
-        dates.forEach(dateStr => {
-            const [y, m, d] = dateStr.split('-');
-            const dateObj = new Date(y, m-1, d);
-            const diaNome = diasSemana[dateObj.getDay()];
-            
-            const dayData = appData[dateStr] || { ent: '', sai1: '', ret2: '', sai2: '', feriado: false };
-            const isFeriadoChecked = dayData.feriado ? 'checked' : '';
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><strong>${diaNome}</strong><br><small>${d}/${m}/${y}</small></td>
-                <td><input type="time" value="${dayData.ent}" onchange="saveData('${dateStr}', 'ent', this.value)"></td>
-                <td><input type="time" value="${dayData.sai1}" onchange="saveData('${dateStr}', 'sai1', this.value)"></td>
-                <td><input type="time" value="${dayData.ret2}" onchange="saveData('${dateStr}', 'ret2', this.value)"></td>
-                <td><input type="time" value="${dayData.sai2}" onchange="saveData('${dateStr}', 'sai2', this.value)"></td>
-                <td>
-                    <label class="cb-container">
-                        <input type="checkbox" ${isFeriadoChecked} onchange="saveData('${dateStr}', 'feriado', this.checked)">
-                    </label>
-                </td>
-                <td class="total-dia" id="total-${dateStr}">00:00</td>
-            `;
-            tbody.appendChild(tr);
-            calcDailyTotal(dateStr, dayData);
-        });
-        updateSummary();
-    }
-
-    function saveData(dateStr, field, value) {
-        if (!appData[dateStr]) appData[dateStr] = { ent: '', sai1: '', ret2: '', sai2: '', feriado: false };
-        appData[dateStr][field] = value;
-        localStorage.setItem('folhaDePontoData', JSON.stringify(appData));
-        calcDailyTotal(dateStr, appData[dateStr]);
-        updateSummary();
-    }
-
-    function calcDailyTotal(dateStr, data) {
-        const toM = (t) => { if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
-        let m1 = toM(data.ent), m2 = toM(data.sai1), m3 = toM(data.ret2), m4 = toM(data.sai2);
-        
-        let workedMins = 0;
-        if(m2 > m1) workedMins += (m2 - m1);
-        if(m4 > m3) workedMins += (m4 - m3);
-
-        let finalMins = workedMins;
-        let isAbono = false;
-
-        if (data.feriado && workedMins === 0) {
-            finalMins = toM(document.getElementById('jornada-diaria').value || '08:00');
-            isAbono = true;
-        }
-
-        const format = (m) => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
-        const el = document.getElementById(`total-${dateStr}`);
-        
-        if(el) {
-            let innerHTML = format(finalMins);
-            if(isAbono) innerHTML += `<span class="texto-abono">(Abonado)</span>`;
-            else if(data.feriado && workedMins > 0) innerHTML += `<span class="texto-extra100">(100%)</span>`;
-            el.innerHTML = innerHTML;
-        }
-        
-        return { total: finalMins, worked: workedMins, isFeriado: data.feriado, isAbono: isAbono };
-    }
-
-    function updateSummary() {
-        const dates = getDatesToRender();
-        let totalPeriodMins = 0;
-        let horas100Mins = 0;
-
-        dates.forEach(d => {
-            const result = calcDailyTotal(d, appData[d] || {});
-            totalPeriodMins += result.total;
-            if (result.isFeriado && !result.isAbono && result.worked > 0) horas100Mins += result.worked;
-        });
-        
-        const format = (m) => {
-            const abs = Math.abs(m);
-            return (m < 0 ? '-' : '') + String(Math.floor(abs/60)).padStart(2,'0') + ':' + String(abs%60).padStart(2,'0');
-        };
-
-        document.getElementById('total-trabalhado').innerText = format(totalPeriodMins);
-        document.getElementById('horas-100').innerText = format(horas100Mins);
-        
-        const base = (parseFloat(document.getElementById('base-hours').value) || 0) * 60;
-        const saldo = totalPeriodMins - base;
-        const saldoEl = document.getElementById('saldo-final');
-        saldoEl.innerText = format(saldo);
-        saldoEl.className = 'value ' + (saldo >= 0 ? 'positive' : 'negative');
-    }
-
-    function exportCSV() {
-        const dates = Object.keys(appData).sort();
-        let csv = "Data,Entrada,Saida_Almoco,Retorno_Almoco,Saida_Final,Feriado\n";
-        dates.forEach(d => {
-            const v = appData[d];
-            const isFeriado = v.feriado ? 'Sim' : 'Nao';
-            csv += `${d},${v.ent},${v.sai1},${v.ret2},${v.sai2},${isFeriado}\n`;
-        });
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'folha_ponto_backup.csv'; a.click();
-    }
-
-    function handleCSVImport(input) {
-        const file = input.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const rows = e.target.result.split('\n').slice(1);
-            rows.forEach(row => {
-                const cols = row.split(',');
-                if(cols.length >= 5 && cols[0].trim().length > 0) {
-                    const date = cols[0].trim();
-                    const isFeriado = cols[5] && cols[5].trim().toLowerCase() === 'sim';
-                    appData[date] = { 
-                        ent: cols[1].trim(), sai1: cols[2].trim(), 
-                        ret2: cols[3].trim(), sai2: cols[4].trim(),
-                        feriado: isFeriado
-                    };
-                }
-            });
-            localStorage.setItem('folhaDePontoData', JSON.stringify(appData));
-            renderTable();
-            alert('Dados importados com sucesso!');
-            input.value = '';
-        };
-        reader.readAsText(file);
-    }
-
-    function clearData() {
-        if(confirm('Isso apagará TODOS os dados salvos. Deseja continuar?')) {
-            appData = {};
-            localStorage.removeItem('folhaDePontoData');
-            renderTable();
-        }
-    }
-</script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
