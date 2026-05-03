@@ -38,11 +38,27 @@
         <div id="view-config" style="display: none;">
             <div class="config-card">
                 <h3 style="margin-bottom: 15px;">Cadastrar Novo Funcionário</h3>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                     <input type="text" id="new-employee-name" placeholder="Nome completo do funcionário">
                     <button class="btn btn-primary" onclick="window.addEmployee()">Cadastrar</button>
                 </div>
                 <p id="config-msg" style="color: var(--success); margin-top: 10px; font-size: 0.9rem;"></p>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin: 25px 0;">
+
+                <h3 style="margin-bottom: 15px;">Funcionários Cadastrados</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align: left; padding-left: 15px;">Nome do Funcionário</th>
+                                <th style="width: 120px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="config-employee-list">
+                            </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

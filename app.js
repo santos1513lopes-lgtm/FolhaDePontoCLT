@@ -1,16 +1,19 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+// Importações atualizadas para podermos apagar dados
+import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayRemove, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ⚠️ COLE A SUA CHAVE AQUI ⚠️
 const firebaseConfig = {
   apiKey: "AIzaSyCs-v8G50VdrPmaoeroyPQ3CZQGhggDpvQ",
   authDomain: "folhadeponto-7cb37.firebaseapp.com",
+  databaseURL: "https://folhadeponto-7cb37-default-rtdb.firebaseio.com",
   projectId: "folhadeponto-7cb37",
   storageBucket: "folhadeponto-7cb37.firebasestorage.app",
   messagingSenderId: "178753574962",
   appId: "1:178753574962:web:451ec8989ac935aa8f842b"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -114,22 +117,71 @@ window.addEmployee = async () => {
     window.loadEmployeesList();
 };
 
+// ======= CARREGAR LISTA DE FUNCIONÁRIOS =======
 window.loadEmployeesList = async () => {
     const empresaRef = doc(db, "empresas", currentUser.uid);
     const docSnap = await getDoc(empresaRef);
     
     const select = document.getElementById('employee-select');
+    const listBody = document.getElementById('config-employee-list'); 
+    
     const currentVal = select.value;
     select.innerHTML = '<option value="">-- Selecione um funcionário --</option>';
+    if (listBody) listBody.innerHTML = ''; 
     
     if (docSnap.exists() && docSnap.data().listaNomes) {
-        docSnap.data().listaNomes.forEach(nome => {
+        const nomes = docSnap.data().listaNomes;
+        
+        nomes.forEach(nome => {
             const opt = document.createElement('option');
             opt.value = nome; opt.innerText = nome;
             select.appendChild(opt);
+
+            if (listBody) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align: left; padding-left: 15px; font-weight: 500;">${nome}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="window.deleteEmployee('${nome}')">🗑️ Excluir</button>
+                    </td>
+                `;
+                listBody.appendChild(tr);
+            }
         });
     }
     select.value = currentVal;
+};
+
+// ======= EXCLUIR FUNCIONÁRIO =======
+window.deleteEmployee = async (employeeName) => {
+    if(!employeeName) return;
+
+    if(confirm(`Tem certeza que deseja EXCLUIR DEFINITIVAMENTE o funcionário "${employeeName}" e todas as suas horas?`)) {
+        
+        try {
+            const empresaRef = doc(db, "empresas", currentUser.uid);
+            await updateDoc(empresaRef, {
+                listaNomes: arrayRemove(employeeName)
+            });
+
+            const empRef = doc(db, "empresas", currentUser.uid, "funcionarios", employeeName);
+            await deleteDoc(empRef);
+
+            alert(`Funcionário ${employeeName} excluído com sucesso!`);
+            
+            if (document.getElementById('employee-select').value === employeeName) {
+                document.getElementById('employee-select').value = "";
+                appData = {}; 
+                window.renderTable();
+            }
+            
+            window.loadEmployeesList(); 
+            
+        } catch (error) {
+            console.error("Erro ao excluir:", error);
+            alert("Ocorreu um erro ao excluir o funcionário.");
+        }
+    }
 };
 
 window.loadEmployeeData = async () => {
@@ -215,7 +267,6 @@ window.renderTable = () => {
 };
 
 window.calcDailyTotal = (dateStr, data) => {
-    // Detecta se é domingo pela data
     const [y, m, d] = dateStr.split('-');
     const dateObj = new Date(y, m-1, d);
     const isDomingo = dateObj.getDay() === 0;
@@ -229,7 +280,6 @@ window.calcDailyTotal = (dateStr, data) => {
     let finalMins = workedMins;
     let isAbono = false;
 
-    // Se marcou feriado mas NÃO trabalhou -> Abono (Ganha as horas sem trabalhar)
     if (data.feriado && workedMins === 0) {
         finalMins = toM(document.getElementById('jornada-diaria').value || '08:00');
         isAbono = true;
@@ -241,7 +291,6 @@ window.calcDailyTotal = (dateStr, data) => {
     if(el) {
         let innerHTML = format(finalMins);
         if(isAbono) innerHTML += `<span style="color: var(--warning); display:block; font-size: 0.75rem;">(Abonado)</span>`;
-        // Se trabalhou no Feriado OU no Domingo, marca como 100%
         else if((data.feriado || isDomingo) && workedMins > 0) innerHTML += `<span style="color: var(--info); display:block; font-size: 0.75rem;">(100%)</span>`;
         el.innerHTML = innerHTML;
     }
@@ -258,7 +307,6 @@ window.updateSummary = () => {
         const result = window.calcDailyTotal(d, appData[d] || {});
         totalMins += result.total;
         
-        // Se trabalhou num Domingo ou Feriado (e não foi abono), vai pro painel de 100%
         if ((result.isFeriado || result.isDomingo) && !result.isAbono && result.worked > 0) {
             horas100Mins += result.worked;
         }
@@ -275,7 +323,6 @@ window.updateSummary = () => {
     saldoEl.className = 'value ' + (saldo >= 0 ? 'positive' : 'negative');
 };
 
-// ======= EXPORTAR, IMPORTAR E LIMPAR =======
 window.clearData = async () => {
     const employeeName = document.getElementById('employee-select').value;
     if(!employeeName) return alert("Selecione um funcionário.");
