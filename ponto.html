@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Folha de Ponto CLT</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --info: #0891b2;
+            --warning: #d97706;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; }
+        .container { max-width: 1050px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 20px; }
+        
+        /* Tabs */
+        .tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 20px; border: none; background-color: #e5e7eb; color: var(--text-muted); border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        .tab-btn.active { background-color: var(--primary); color: white; }
+
+        /* Cards e Controles */
+        .controls-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .controls-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 15px; }
+        
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        .control-group label { font-size: 0.85rem; font-weight: bold; color: var(--text-muted); }
+        
+        input[type="text"], input[type="number"], input[type="week"], input[type="month"], input[type="time"].config-time { 
+            padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; width: 100%; 
+        }
+        input:focus { outline: 2px solid var(--primary); border-color: transparent; }
+
+        /* Tabela */
+        .table-container { background: var(--card-bg); border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); overflow-x: auto; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 10px; text-align: center; border-bottom: 1px solid var(--border); }
+        th { background-color: #f8fafc; color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; }
+        td input[type="time"] { padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-family: monospace; width: auto; }
+        
+        /* Checkbox Customizado */
+        .cb-container { display: inline-flex; align-items: center; cursor: pointer; }
+        .cb-container input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+
+        .total-dia { font-weight: bold; font-family: monospace; font-size: 1.05rem; }
+        .texto-abono { color: var(--warning); font-size: 0.85rem; display: block; }
+        .texto-extra100 { color: var(--info); font-size: 0.85rem; display: block; }
+
+        /* Resumo */
+        .summary-card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: space-around; margin-bottom: 20px; text-align: center; flex-wrap: wrap; gap: 15px;}
+        .summary-item h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px; }
+        .summary-item .value { font-size: 1.8rem; font-weight: bold; }
+        .positive { color: var(--success); }
+        .negative { color: var(--danger); }
+        .info-color { color: var(--info); }
+
+        /* Ações */
+        .actions { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 10px 18px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; color: white; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background-color: var(--primary); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-success { background-color: var(--success); }
+        .btn-info { background-color: var(--info); }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        #csv-import-hidden { display: none; }
+
+        @media (max-width: 768px) { .controls-grid { grid-template-columns: 1fr 1fr; } }
+        @media print {
+            body { background: white; padding: 0; }
+            .tabs, .actions, .tab-btn, #csv-import-hidden { display: none; }
+            .controls-card { border: none; box-shadow: none; padding: 10px 0; }
+            .controls-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
+            .table-container { box-shadow: none; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Folha de Ponto CLT</h1>
+        <p id="period-subtitle">Controle de jornada e banco de horas</p>
+    </div>
+
+    <div class="tabs">
+        <button id="btn-week" class="tab-btn active" onclick="setMode('week')">Visão Semanal</button>
+        <button id="btn-month" class="tab-btn" onclick="setMode('month')">Visão Mensal</button>
+    </div>
+
+    <div class="controls-card">
+        <div class="controls-grid">
+            <div class="control-group">
+                <label>Nome do Funcionário</label>
+                <input type="text" id="employee-name" placeholder="Nome completo" oninput="saveSettings()">
+            </div>
+            <div class="control-group" id="week-control">
+                <label>Selecione a Semana</label>
+                <input type="week" id="week-input" onchange="renderTable()">
+            </div>
+            <div class="control-group" id="month-control" style="display: none;">
+                <label>Selecione o Mês</label>
+                <input type="month" id="month-input" onchange="renderTable()">
+            </div>
+            <div class="control-group">
+                <label>Carga Base (Ex: 44h)</label>
+                <input type="number" id="base-hours" value="44" onchange="updateSummary()">
+            </div>
+            <div class="control-group">
+                <label>Jornada Diária (Abono)</label>
+                <input type="time" class="config-time" id="jornada-diaria" value="08:00" onchange="saveSettings(); renderTable()">
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table id="ponto-table">
+            <thead>
+                <tr>
+                    <th>Data / Dia</th>
+                    <th>Entrada</th>
+                    <th>Saída Almoço</th>
+                    <th>Retorno Almoço</th>
+                    <th>Saída Final</th>
+                    <th>Feriado / Atestado</th>
+                    <th>Total do Dia</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
+
+    <div class="summary-card">
+        <div class="summary-item">
+            <h3>Total (Trabalho + Abono)</h3>
+            <div class="value" id="total-trabalhado">00:00</div>
+        </div>
+        <div class="summary-item">
+            <h3>Saldo de Horas (Banco)</h3>
+            <div class="value" id="saldo-final">00:00</div>
+        </div>
+        <div class="summary-item">
+            <h3>Horas 100% (Feriados)</h3>
+            <div class="value info-color" id="horas-100">00:00</div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-danger" onclick="clearData()">Limpar Tudo</button>
+        <input type="file" id="csv-import-hidden" accept=".csv" onchange="handleCSVImport(this)">
+        <button class="btn btn-info" onclick="document.getElementById('csv-import-hidden').click()">Importar CSV</button>
+        <button class="btn btn-success" onclick="exportCSV()">Exportar CSV</button>
+        <button class="btn btn-primary" onclick="window.print()">Imprimir Folha</button>
+    </div>
+</div>
+
+<script>
+    let currentMode = 'week'; 
+    let appData = {};
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Carregar dados salvos
+        appData = JSON.parse(localStorage.getItem('folhaDePontoData')) || {};
+        document.getElementById('employee-name').value = localStorage.getItem('employeeName') || '';
+        document.getElementById('jornada-diaria').value = localStorage.getItem('jornadaDiaria') || '08:00';
+
+        // Datas Iniciais
+        const now = new Date();
+        document.getElementById('month-input').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+        const week1 = new Date(d.getFullYear(), 0, 4);
+        const weekNo = 1 + Math.round(((d.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+        document.getElementById('week-input').value = `${d.getFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+
+        renderTable();
+    });
+
+    function saveSettings() {
+        localStorage.setItem('employeeName', document.getElementById('employee-name').value);
+        localStorage.setItem('jornadaDiaria', document.getElementById('jornada-diaria').value);
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('btn-week').classList.remove('active');
+        document.getElementById('btn-month').classList.remove('active');
+        document.getElementById(`btn-${mode}`).classList.add('active');
+
+        if (mode === 'week') {
+            document.getElementById('week-control').style.display = 'flex';
+            document.getElementById('month-control').style.display = 'none';
+            document.getElementById('base-hours').value = 44;
+        } else {
+            document.getElementById('week-control').style.display = 'none';
+            document.getElementById('month-control').style.display = 'flex';
+            document.getElementById('base-hours').value = 220;
+        }
+        renderTable();
+    }
+
+    function getDatesToRender() {
+        let dates = [];
+        if (currentMode === 'week') {
+            const weekVal = document.getElementById('week-input').value; 
+            if (!weekVal) return [];
+            const [y, w] = weekVal.split('-W').map(Number);
+            const simple = new Date(y, 0, 1 + (w - 1) * 7);
+            const ISOweekStart = new Date(simple);
+            const dow = simple.getDay();
+            ISOweekStart.setDate(simple.getDate() - (dow === 0 ? 6 : dow - 1));
+            for (let i = 0; i < 7; i++) {
+                const cur = new Date(ISOweekStart);
+                cur.setDate(ISOweekStart.getDate() + i);
+                dates.push(cur.toISOString().split('T')[0]);
+            }
+        } else {
+            const [y, m] = document.getElementById('month-input').value.split('-').map(Number);
+            const lastDay = new Date(y, m, 0).getDate();
+            for (let i = 1; i <= lastDay; i++) {
+                dates.push(`${y}-${String(m).padStart(2,'0')}-${String(i).padStart(2,'0')}`);
+            }
+        }
+        return dates;
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('table-body');
+        tbody.innerHTML = '';
+        const dates = getDatesToRender();
+        const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
+        dates.forEach(dateStr => {
+            const [y, m, d] = dateStr.split('-');
+            const dateObj = new Date(y, m-1, d);
+            const diaNome = diasSemana[dateObj.getDay()];
+            const isDomingo = dateObj.getDay() === 0;
+            
+            const dayData = appData[dateStr] || { ent: '', sai1: '', ret2: '', sai2: '', feriado: false };
+            const isFeriadoChecked = dayData.feriado ? 'checked' : '';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${diaNome}</strong><br><small>${d}/${m}/${y}</small></td>
+                <td><input type="time" value="${dayData.ent}" onchange="saveData('${dateStr}', 'ent', this.value)"></td>
+                <td><input type="time" value="${dayData.sai1}" onchange="saveData('${dateStr}', 'sai1', this.value)"></td>
+                <td><input type="time" value="${dayData.ret2}" onchange="saveData('${dateStr}', 'ret2', this.value)"></td>
+                <td><input type="time" value="${dayData.sai2}" onchange="saveData('${dateStr}', 'sai2', this.value)"></td>
+                <td>
+                    <label class="cb-container">
+                        <input type="checkbox" ${isFeriadoChecked} onchange="saveData('${dateStr}', 'feriado', this.checked)">
+                    </label>
+                </td>
+                <td class="total-dia" id="total-${dateStr}">00:00</td>
+            `;
+            tbody.appendChild(tr);
+            calcDailyTotal(dateStr, dayData);
+        });
+        updateSummary();
+    }
+
+    function saveData(dateStr, field, value) {
+        if (!appData[dateStr]) appData[dateStr] = { ent: '', sai1: '', ret2: '', sai2: '', feriado: false };
+        appData[dateStr][field] = value;
+        localStorage.setItem('folhaDePontoData', JSON.stringify(appData));
+        calcDailyTotal(dateStr, appData[dateStr]);
+        updateSummary();
+    }
+
+    function calcDailyTotal(dateStr, data) {
+        const toM = (t) => { if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
+        let m1 = toM(data.ent), m2 = toM(data.sai1), m3 = toM(data.ret2), m4 = toM(data.sai2);
+        
+        let workedMins = 0;
+        if(m2 > m1) workedMins += (m2 - m1);
+        if(m4 > m3) workedMins += (m4 - m3);
+
+        let finalMins = workedMins;
+        let isAbono = false;
+
+        // Se marcou feriado mas não tem horas trabalhadas -> Abono
+        if (data.feriado && workedMins === 0) {
+            finalMins = toM(document.getElementById('jornada-diaria').value || '08:00');
+            isAbono = true;
+        }
+
+        const format = (m) => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+        const el = document.getElementById(`total-${dateStr}`);
+        
+        if(el) {
+            let innerHTML = format(finalMins);
+            if(isAbono) innerHTML += `<span class="texto-abono"><br>(Abonado)</span>`;
+            else if(data.feriado && workedMins > 0) innerHTML += `<span class="texto-extra100"><br>(100%)</span>`;
+            el.innerHTML = innerHTML;
+        }
+        
+        return { total: finalMins, worked: workedMins, isFeriado: data.feriado, isAbono: isAbono };
+    }
+
+    function updateSummary() {
+        const dates = getDatesToRender();
+        let totalPeriodMins = 0;
+        let horas100Mins = 0;
+
+        dates.forEach(d => {
+            const result = calcDailyTotal(d, appData[d] || {});
+            totalPeriodMins += result.total;
+            
+            // Soma horas 100% se trabalhou no feriado
+            if (result.isFeriado && !result.isAbono && result.worked > 0) {
+                horas100Mins += result.worked;
+            }
+        });
+        
+        const format = (m) => {
+            const abs = Math.abs(m);
+            return (m < 0 ? '-' : '') + String(Math.floor(abs/60)).padStart(2,'0') + ':' + String(abs%60).padStart(2,'0');
+        };
+
+        document.getElementById('total-trabalhado').innerText = format(totalPeriodMins);
+        document.getElementById('horas-100').innerText = format(horas100Mins);
+        
+        const base = (parseFloat(document.getElementById('base-hours').value) || 0) * 60;
+        const saldo = totalPeriodMins - base;
+        const saldoEl = document.getElementById('saldo-final');
+        saldoEl.innerText = format(saldo);
+        saldoEl.className = 'value ' + (saldo >= 0 ? 'positive' : 'negative');
+    }
+
+    function exportCSV() {
+        const dates = Object.keys(appData).sort();
+        let csv = "Data,Entrada,Saida_Almoco,Retorno_Almoco,Saida_Final,Feriado\n";
+        dates.forEach(d => {
+            const v = appData[d];
+            const isFeriado = v.feriado ? 'Sim' : 'Nao';
+            csv += `${d},${v.ent},${v.sai1},${v.ret2},${v.sai2},${isFeriado}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'folha_ponto_backup.csv'; a.click();
+    }
+
+    function handleCSVImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const rows = e.target.result.split('\n').slice(1);
+            rows.forEach(row => {
+                const cols = row.split(',');
+                if(cols.length >= 5 && cols[0].trim().length > 0) {
+                    const date = cols[0].trim();
+                    const isFeriado = cols[5] && cols[5].trim().toLowerCase() === 'sim';
+                    appData[date] = { 
+                        ent: cols[1].trim(), sai1: cols[2].trim(), 
+                        ret2: cols[3].trim(), sai2: cols[4].trim(),
+                        feriado: isFeriado
+                    };
+                }
+            });
+            localStorage.setItem('folhaDePontoData', JSON.stringify(appData));
+            renderTable();
+            alert('Dados importados com sucesso!');
+            input.value = ''; // Reset file input
+        };
+        reader.readAsText(file);
+    }
+
+    function clearData() {
+        if(confirm('Isso apagará TODOS os dados salvos. Deseja continuar?')) {
+            appData = {};
+            localStorage.removeItem('folhaDePontoData');
+            renderTable();
+        }
+    }
+</script>
+</body>
+</html>
